@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>9618 Pseudocode Runner – Paper 2</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --error: #f87171;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --editor-bg: #0b1220;
+      --line-num: #94a3b8;
+      --line-num-bg: #111827;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 span {
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      background: #1e3a5f;
+      color: var(--accent);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button {
+      background: var(--accent);
+      color: #0f172a;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: var(--accent-hover); }
+    button.secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: 0;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel:last-child { border-right: none; }
+
+    .panel-header {
+      background: var(--panel);
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .editor-wrapper {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      background: var(--editor-bg);
+      position: relative;
+    }
+
+    .line-numbers {
+      width: 56px;
+      background: var(--line-num-bg);
+      color: var(--line-num);
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.5;
+      padding: 16px 12px 16px 8px;
+      text-align: right;
+      user-select: none;
+      overflow: hidden;
+      flex-shrink: 0;
+      border-right: 1px solid #1e293b;
+      letter-spacing: 0.02em;
+      white-space: pre;
+    }
+
+    #code {
+      flex: 1;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 16px;
+      white-space: pre;
+      overflow: auto;
+      tab-size: 4;
+    }
+
+    .output-area {
+      flex: 1;
+      background: var(--editor-bg);
+      overflow: auto;
+      padding: 16px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .output-line { margin-bottom: 2px; }
+    .output-error {
+      color: var(--error);
+      background: rgba(248, 113, 113, 0.08);
+      border-left: 3px solid var(--error);
+      padding: 10px 14px;
+      margin: 8px 0;
+      border-radius: 0 6px 6px 0;
+      white-space: pre-wrap;
+    }
+    .output-success { color: var(--success); }
+    .output-info { color: var(--muted); font-style: italic; }
+    .output-prompt { color: var(--accent); }
+
+    .status-bar {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 6px 16px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .examples {
+      position: relative;
+    }
+
+    .examples-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-width: 220px;
+      z-index: 50;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+
+    .examples-menu.open { display: block; }
+
+    .examples-menu button {
+      width: 100%;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      border-radius: 0;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 500;
+      font-size: 0.85rem;
+    }
+    .examples-menu button:hover {
+      background: var(--border);
+    }
+
+    /* Highlight error line */
+    .error-line {
+      background: rgba(248, 113, 113, 0.15) !important;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      <span>9618 Pseudocode Runner</span>
+      <span class="badge">Paper 2 · AS Level</span>
+    </h1>
+    <div class="toolbar">
+      <div class="examples">
+        <button class="secondary" id="btnExamples">Examples ▾</button>
+        <div class="examples-menu" id="examplesMenu">
+          <button data-example="hello">Hello World</button>
+          <button data-example="input">Input & Variables</button>
+          <button data-example="if">IF / ELSE</button>
+          <button data-example="for">FOR Loop</button>
+          <button data-example="while">WHILE Loop</button>
+          <button data-example="repeat">REPEAT…UNTIL</button>
+          <button data-example="array">1D Array</button>
+          <button data-example="case">CASE OF</button>
+          <button data-example="error">Error Demo</button>
+        </div>
+      </div>
+      <button class="secondary" id="btnClear">Clear</button>
+      <button id="btnRun">▶ Run</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="panel">
+      <div class="panel-header">
+        <span>Pseudocode Editor</span>
+        <span id="lineCol">Ln 1, Col 1</span>
+      </div>
+      <div class="editor-wrapper">
+        <div class="line-numbers" id="lineNumbers">1</div>
+        <textarea id="code" spellcheck="false" placeholder="// Write your 9618 Paper 2 pseudocode here
+DECLARE Name : STRING
+OUTPUT &quot;Enter your name: &quot;
+INPUT Name
+OUTPUT &quot;Hello, &quot;, Name"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>Output / Errors</span>
+        <span id="runStatus"></span>
+      </div>
+      <div class="output-area" id="output"></div>
+    </div>
+  </main>
+
+  <div class="status-bar">
+    <span>Cambridge International AS Level Computer Science (9618) · Paper 2 style</span>
+    <span>Errors show exact line number + clear description</span>
+  </div>
+
+  <script>
+    // ===================== EXAMPLES =====================
+    const EXAMPLES = {
+      hello: `// Simple output
+OUTPUT "Hello, World!"
+OUTPUT "Welcome to 9618 Pseudocode Runner"`,
+
+      input: `// Variables, DECLARE, INPUT, OUTPUT
+DECLARE Name : STRING
+DECLARE Age : INTEGER
+
+OUTPUT "What is your name?"
+INPUT Name
+OUTPUT "How old are you?"
+INPUT Age
+
+OUTPUT "Hello ", Name, ". You are ", Age, " years old."`,
+
+      if: `// IF ... THEN ... ELSE ... ENDIF
+DECLARE Mark : INTEGER
+OUTPUT "Enter your mark (0-100):"
+INPUT Mark
+
+IF Mark >= 70 THEN
+    OUTPUT "Grade: A"
+ELSE
+    IF Mark >= 60 THEN
+        OUTPUT "Grade: B"
+    ELSE
+        IF Mark >= 50 THEN
+            OUTPUT "Grade: C"
+        ELSE
+            OUTPUT "Grade: Fail"
+        ENDIF
+    ENDIF
+ENDIF`,
+
+      for: `// FOR loop with STEP
+DECLARE i : INTEGER
+DECLARE Total : INTEGER
+
+Total <- 0
+FOR i <- 1 TO 10
+    OUTPUT "Number: ", i
+    Total <- Total + i
+NEXT i
+
+OUTPUT "Sum of 1 to 10 = ", Total
+
+// Countdown
+OUTPUT ""
+OUTPUT "Countdown:"
+FOR i <- 5 TO 1 STEP -1
+    OUTPUT i
+NEXT i
+OUTPUT "Blast off!"`,
+
+      while: `// WHILE loop
+DECLARE Count : INTEGER
+Count <- 1
+
+WHILE Count <= 5
+    OUTPUT "Count is ", Count
+    Count <- Count + 1
+ENDWHILE
+
+OUTPUT "Done."`,
+
+      repeat: `// REPEAT ... UNTIL
+DECLARE Number : INTEGER
+DECLARE Attempts : INTEGER
+
+Attempts <- 0
+REPEAT
+    OUTPUT "Enter a number greater than 10:"
+    INPUT Number
+    Attempts <- Attempts + 1
+UNTIL Number > 10
+
+OUTPUT "You entered ", Number, " after ", Attempts, " attempt(s)."`,
+
+      array: `// 1D Array
+DECLARE Scores : ARRAY[1:5] OF INTEGER
+DECLARE i : INTEGER
+DECLARE Total : INTEGER
+DECLARE Average : REAL
+
+Total <- 0
+FOR i <- 1 TO 5
+    OUTPUT "Enter score ", i, ":"
+    INPUT Scores[i]
+    Total <- Total + Scores[i]
+NEXT i
+
+Average <- Total / 5
+OUTPUT "Total = ", Total
+OUTPUT "Average = ", Average`,
+
+      case: `// CASE OF
+DECLARE Day : INTEGER
+OUTPUT "Enter day number (1-7):"
+INPUT Day
+
+CASE OF Day
+    1 : OUTPUT "Monday"
+    2 : OUTPUT "Tuesday"
+    3 : OUTPUT "Wednesday"
+    4 : OUTPUT "Thursday"
+    5 : OUTPUT "Friday"
+    6, 7 : OUTPUT "Weekend"
+    OTHERWISE : OUTPUT "Invalid day number"
+ENDCASE`,
+
+      error: `// This example contains deliberate errors so you can see the messages
+DECLARE x : INTEGER
+x <- 10
+
+// Missing ENDIF
+IF x > 5 THEN
+    OUTPUT "Bigger than 5"
+// ENDIF is missing on purpose
+
+OUTPUT "This line will never run"`
+    };
+
+    // ===================== EDITOR HELPERS =====================
+    const codeEl = document.getElementById('code');
+    const lineNumbersEl = document.getElementById('lineNumbers');
+    const outputEl = document.getElementById('output');
+    const lineColEl = document.getElementById('lineCol');
+    const runStatusEl = document.getElementById('runStatus');
+
+    function updateLineNumbers() {
+      const lines = codeEl.value.split('\n');
+      let html = '';
+      for (let i = 1; i <= lines.length; i++) {
+        html += i + '\n';
+      }
+      lineNumbersEl.textContent = html || '1';
+    }
+
+    function updateCursorPos() {
+      const text = codeEl.value.substring(0, codeEl.selectionStart);
+      const lines = text.split('\n');
+      const line = lines.length;
+      const col = lines[lines.length - 1].length + 1;
+      lineColEl.textContent = `Ln ${line}, Col ${col}`;
+    }
+
+    codeEl.addEventListener('input', () => {
+      updateLineNumbers();
+      updateCursorPos();
+    });
+    codeEl.addEventListener('scroll', () => {
+      lineNumbersEl.scrollTop = codeEl.scrollTop;
+    });
+    codeEl.addEventListener('click', updateCursorPos);
+    codeEl.addEventListener('keyup', updateCursorPos);
+
+    // Tab support
+    codeEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = codeEl.selectionStart;
+        const end = codeEl.selectionEnd;
+        codeEl.value = codeEl.value.substring(0, start) + '    ' + codeEl.value.substring(end);
+        codeEl.selectionStart = codeEl.selectionEnd = start + 4;
+        updateLineNumbers();
+      }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        runProgram();
+      }
+    });
+
+    updateLineNumbers();
+
+    // ===================== EXAMPLES MENU =====================
+    const btnExamples = document.getElementById('btnExamples');
+    const examplesMenu = document.getElementById('examplesMenu');
+
+    btnExamples.addEventListener('click', (e) => {
+      e.stopPropagation();
+      examplesMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', () => examplesMenu.classList.remove('open'));
+
+    document.querySelectorAll('[data-example]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.example;
+        codeEl.value = EXAMPLES[key];
+        updateLineNumbers();
+        examplesMenu.classList.remove('open');
+        outputEl.innerHTML = '';
+        runStatusEl.textContent = '';
+      });
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => {
+      codeEl.value = '';
+      updateLineNumbers();
+      outputEl.innerHTML = '';
+      runStatusEl.textContent = '';
+    });
+
+    document.getElementById('btnRun').addEventListener('click', runProgram);
+
+    // ===================== INTERPRETER =====================
+    class PseudoError extends Error {
+      constructor(message, line) {
+        super(message);
+        this.line = line;
+        this.name = 'PseudoError';
+      }
+    }
+
+    class Interpreter {
+      constructor(source) {
+        this.lines = source.split('\n');
+        this.pc = 0;                    // program counter (0-based)
+        this.variables = {};            // name -> { type, value }
+        this.output = [];
+        this.inputQueue = [];           // for future non-blocking, currently we use prompt
+        this.callStack = [];
+        this.maxSteps = 100000;         // prevent infinite loops
+        this.steps = 0;
+      }
+
+      run() {
+        while (this.pc < this.lines.length) {
+          this.steps++;
+          if (this.steps > this.maxSteps) {
+            throw new PseudoError('Program stopped: possible infinite loop (too many steps)', this.pc + 1);
+          }
+          this.executeLine();
+        }
+      }
+
+      // ---------- helpers ----------
+      currentLineNumber() {
+        return this.pc + 1;
+      }
+
+      rawLine() {
+        return this.lines[this.pc] || '';
+      }
+
+      cleanLine() {
+        let line = this.rawLine();
+        // remove comments
+        const commentIdx = line.indexOf('//');
+        if (commentIdx !== -1) line = line.substring(0, commentIdx);
+        return line.trim();
+      }
+
+      nextLine() {
+        this.pc++;
+      }
+
+      // Find matching end keyword (respecting nesting)
+      findMatching(startKeywords, endKeyword, startLine) {
+        let depth = 1;
+        let i = startLine + 1;
+        while (i < this.lines.length) {
+          let l = this.lines[i];
+          const cIdx = l.indexOf('//');
+          if (cIdx !== -1) l = l.substring(0, cIdx);
+          l = l.trim().toUpperCase();
+
+          for (const sk of startKeywords) {
+            if (l.startsWith(sk + ' ') || l === sk || l.startsWith(sk + '(')) {
+              depth++;
+              break;
+            }
+          }
+          if (l === endKeyword || l.startsWith(endKeyword + ' ')) {
+            depth--;
+            if (depth === 0) return i;
+          }
+          i++;
+        }
+        return -1;
+      }
+
+      // ---------- expression evaluation ----------
+      evalExpr(expr, lineNum) {
+        expr = expr.trim();
+        if (expr === '') throw new PseudoError('Empty expression', lineNum);
+
+        // Replace ← with nothing (already handled in assignment)
+        // Handle string concatenation with &
+        // Very simple recursive descent / replace based evaluator
+
+        // First handle function calls: LENGTH, LEFT, RIGHT, MID, INT, etc.
+        expr = this.replaceFunctions(expr, lineNum);
+
+        // Replace identifiers with their values
+        expr = this.replaceIdentifiers(expr, lineNum);
+
+        // Convert pseudocode operators to JS
+        let jsExpr = expr
+          .replace(/\bDIV\b/gi, '/')
+          .replace(/\bMOD\b/gi, '%')
+          .replace(/\bAND\b/gi, '&&')
+          .replace(/\bOR\b/gi, '||')
+          .replace(/\bNOT\b/gi, '!')
+          .replace(/=/g, '===')          // careful: already replaced identifiers
+          .replace(/<>/g, '!==')
+          .replace(/≤/g, '<=')
+          .replace(/≥/g, '>=');
+
+        // Restore proper comparison after the = → === hack
+        // (we already converted identifiers, so remaining = should be comparisons)
+        // Actually the simple replace is dangerous. Better approach below.
+
+        try {
+          // Safer evaluation using Function
+          // We only allow a limited set of operations
+          const result = this.safeEval(expr, lineNum);
+          return result;
+        } catch (e) {
+          if (e instanceof PseudoError) throw e;
+          throw new PseudoError(`Cannot evaluate expression: ${expr}`, lineNum);
+        }
+      }
+
+      replaceFunctions(expr, lineNum) {
+        // LENGTH(str)
+        expr = expr.replace(/LENGTH\s*\(\s*([^)]+)\s*\)/gi, (_, arg) => {
+          const val = this.evalExpr(arg, lineNum);
+          return String(String(val).length);
+        });
+
+        // LEFT(str, n)
+        expr = expr.replace(/LEFT\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/gi, (_, s, n) => {
+          const str = String(this.evalExpr(s, lineNum));
+          const num = Number(this.evalExpr(n, lineNum));
+          return JSON.stringify(str.substring(0, num));
+        });
+
+        // RIGHT(str, n)
+        expr = expr.replace(/RIGHT\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/gi, (_, s, n) => {
+          const str = String(this.evalExpr(s, lineNum));
+          const num = Number(this.evalExpr(n, lineNum));
+          return JSON.stringify(str.substring(str.length - num));
+        });
+
+        // MID(str, start, length)
+        expr = expr.replace(/MID\s*\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^)]+)\s*\)/gi, (_, s, start, len) => {
+          const str = String(this.evalExpr(s, lineNum));
+          const st = Number(this.evalExpr(start, lineNum)) - 1; // 1-based
+          const ln = Number(this.evalExpr(len, lineNum));
+          return JSON.stringify(str.substring(st, st + ln));
+        });
+
+        // INT(x)
+        expr = expr.replace(/INT\s*\(\s*([^)]+)\s*\)/gi, (_, arg) => {
+          return String(Math.trunc(Number(this.evalExpr(arg, lineNum))));
+        });
+
+        // RAND(x) - returns 0..x-1
+        expr = expr.replace(/RAND\s*\(\s*([^)]+)\s*\)/gi, (_, arg) => {
+          const n = Number(this.evalExpr(arg, lineNum));
+          return String(Math.floor(Math.random() * n));
+        });
+
+        return expr;
+      }
+
+      replaceIdentifiers(expr, lineNum) {
+        // Replace known variables with their JSON values
+        // Sort by length descending to avoid partial matches
+        const names = Object.keys(this.variables).sort((a, b) => b.length - a.length);
+        for (const name of names) {
+          const re = new RegExp('\\b' + name + '\\b', 'g');
+          const val = this.variables[name].value;
+          let replacement;
+          if (typeof val === 'string') replacement = JSON.stringify(val);
+          else if (typeof val === 'boolean') replacement = val ? 'true' : 'false';
+          else if (val === null || val === undefined) replacement = 'null';
+          else replacement = String(val);
+          expr = expr.replace(re, replacement);
+        }
+        return expr;
+      }
+
+      safeEval(expr, lineNum) {
+        // Convert & to + for strings, but we need to be careful
+        // Simple approach: if both sides look like strings, join them
+
+        // First normalise operators
+        let e = expr.trim();
+
+        // Handle string concatenation with &
+        if (e.includes('&')) {
+          const parts = e.split('&').map(p => p.trim());
+          let result = '';
+          for (const part of parts) {
+            const val = this.safeEval(part, lineNum);
+            result += (val === null || val === undefined) ? '' : String(val);
+          }
+          return result;
+        }
+
+        // Boolean literals
+        if (/^TRUE$/i.test(e)) return true;
+        if (/^FALSE$/i.test(e)) return false;
+
+        // Number
+        if (/^-?\d+(\.\d+)?$/.test(e)) return Number(e);
+
+        // String literal
+        if ((e.startsWith('"') && e.endsWith('"')) || (e.startsWith("'") && e.endsWith("'"))) {
+          return e.slice(1, -1);
+        }
+
+        // Comparison and arithmetic – use a very restricted Function
+        // Convert pseudocode operators
+        let js = e
+          .replace(/\bDIV\b/gi, '/')
+          .replace(/\bMOD\b/gi, '%')
+          .replace(/\bAND\b/gi, '&&')
+          .replace(/\bOR\b/gi, '||')
+          .replace(/\bNOT\b/gi, '!')
+          .replace(/<>/g, '!=')
+          .replace(/(?<![<>=!])=(?![={])/g, '==');  // single = becomes ==
+
+        // Only allow safe characters
+        if (!/^[0-9+\-*/%()., <>=!&|"'\w\s]+$/.test(js)) {
+          throw new PseudoError(`Invalid characters in expression: ${expr}`, lineNum);
+        }
+
+        try {
+          // eslint-disable-next-line no-new-func
+          const fn = new Function(`"use strict"; return (${js});`);
+          return fn();
+        } catch (err) {
+          throw new PseudoError(`Cannot evaluate: ${expr}`, lineNum);
+        }
+      }
+
+      getValue(name, lineNum) {
+        if (!(name in this.variables)) {
+          throw new PseudoError(`Variable "${name}" has not been declared`, lineNum);
+        }
+        return this.variables[name].value;
+      }
+
+      setValue(name, value, lineNum) {
+        if (!(name in this.variables)) {
+          throw new PseudoError(`Variable "${name}" has not been declared. Use DECLARE first.`, lineNum);
+        }
+        this.variables[name].value = value;
+      }
+
+      // ---------- statement execution ----------
+      executeLine() {
+        const lineNum = this.currentLineNumber();
+        const line = this.cleanLine();
+
+        if (line === '') {
+          this.nextLine();
+          return;
+        }
+
+        const upper = line.toUpperCase();
+
+        // DECLARE
+        if (upper.startsWith('DECLARE ')) {
+          this.handleDeclare(line, lineNum);
+          this.nextLine();
+          return;
+        }
+
+        // CONSTANT (treat similar to DECLARE + assign)
+        if (upper.startsWith('CONSTANT ')) {
+          this.handleConstant(line, lineNum);
+          this.nextLine();
+          return;
+        }
+
+        // INPUT
+        if (upper.startsWith('INPUT ')) {
+          this.handleInput(line, lineNum);
+          this.nextLine();
+          return;
+        }
+
+        // OUTPUT / PRINT
+        if (upper.startsWith('OUTPUT ') || upper.startsWith('PRINT ')) {
+          this.handleOutput(line, lineNum);
+          this.nextLine();
+          return;
+        }
+
+        // IF
+        if (upper.startsWith('IF ')) {
+          this.handleIf(line, lineNum);
+          return; // handleIf manages pc
+        }
+
+        // CASE OF
+        if (upper.startsWith('CASE OF ')) {
+          this.handleCase(line, lineNum);
+          return;
+        }
+
+        // FOR
+        if (upper.startsWith('FOR ')) {
+          this.handleFor(line, lineNum);
+          return;
+        }
+
+        // WHILE
+        if (upper.startsWith('WHILE ')) {
+          this.handleWhile(line, lineNum);
+          return;
+        }
+
+        // REPEAT
+        if (upper === 'REPEAT') {
+          this.handleRepeat(lineNum);
+          return;
+        }
+
+        // Assignment  (identifier ← expr)  or  (identifier <- expr)
+        if (line.includes('←') || line.includes('<-') || /^[A-Za-z_][A-Za-z0-9_]*\s*=/.test(line)) {
+          this.handleAssignment(line, lineNum);
+          this.nextLine();
+          return;
+        }
+
+        // END* keywords that should not appear alone here
+        if (['ENDIF', 'ENDCASE', 'ENDWHILE', 'NEXT', 'UNTIL'].some(k => upper.startsWith(k))) {
+          throw new PseudoError(`Unexpected "${line.split(/\s+/)[0]}" – check matching structure`, lineNum);
+        }
+
+        throw new PseudoError(`I do not understand this line: ${line}`, lineNum);
+      }
+
+      handleDeclare(line, lineNum) {
+        // DECLARE Name : TYPE
+        // DECLARE Name : ARRAY[1:10] OF INTEGER
+        const m = line.match(/^DECLARE\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/i);
+        if (!m) throw new PseudoError('Invalid DECLARE syntax. Expected: DECLARE Name : TYPE', lineNum);
+
+        const name = m[1];
+        let typePart = m[2].trim();
+
+        if (this.variables[name]) {
+          throw new PseudoError(`Variable "${name}" is already declared`, lineNum);
+        }
+
+        // Array?
+        const arrMatch = typePart.match(/^ARRAY\s*\[\s*(\d+)\s*:\s*(\d+)\s*\]\s*OF\s+(\w+)$/i);
+        if (arrMatch) {
+          const low = parseInt(arrMatch[1], 10);
+          const high = parseInt(arrMatch[2], 10);
+          const elemType = arrMatch[3].toUpperCase();
+          if (low > high) throw new PseudoError('Array lower bound cannot be greater than upper bound', lineNum);
+
+          const arr = {};
+          for (let i = low; i <= high; i++) arr[i] = this.defaultValue(elemType);
+          this.variables[name] = { type: 'ARRAY', elemType, low, high, value: arr };
+        } else {
+          const type = typePart.toUpperCase();
+          const allowed = ['INTEGER', 'REAL', 'STRING', 'CHAR', 'BOOLEAN', 'DATE'];
+          if (!allowed.includes(type)) {
+            throw new PseudoError(`Unknown data type "${typePart}". Allowed: ${allowed.join(', ')}`, lineNum);
+          }
+          this.variables[name] = { type, value: this.defaultValue(type) };
+        }
+      }
+
+      defaultValue(type) {
+        switch (type) {
+          case 'INTEGER': return 0;
+          case 'REAL': return 0.0;
+          case 'STRING': return '';
+          case 'CHAR': return '';
+          case 'BOOLEAN': return false;
+          case 'DATE': return '';
+          default: return null;
+        }
+      }
+
+      handleConstant(line, lineNum) {
+        // CONSTANT Name = value   or  CONSTANT Name ← value
+        const m = line.match(/^CONSTANT\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:←|<-|=)\s*(.+)$/i);
+        if (!m) throw new PseudoError('Invalid CONSTANT syntax. Expected: CONSTANT Name ← value', lineNum);
+        const name = m[1];
+        const value = this.evalExpr(m[2], lineNum);
+        this.variables[name] = { type: 'CONSTANT', value };
+      }
+
+      handleAssignment(line, lineNum) {
+        let name, expr;
+        if (line.includes('←')) {
+          [name, expr] = line.split('←').map(s => s.trim());
+        } else if (line.includes('<-')) {
+          [name, expr] = line.split('<-').map(s => s.trim());
+        } else {
+          const eq = line.indexOf('=');
+          name = line.substring(0, eq).trim();
+          expr = line.substring(eq + 1).trim();
+        }
+
+        // Array element?  Scores[i]
+        const arrMatch = name.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.+)\s*\]$/);
+        if (arrMatch) {
+          const arrName = arrMatch[1];
+          const indexExpr = arrMatch[2];
+          if (!(arrName in this.variables) || this.variables[arrName].type !== 'ARRAY') {
+            throw new PseudoError(`"${arrName}" is not a declared array`, lineNum);
+          }
+          const idx = this.evalExpr(indexExpr, lineNum);
+          const arr = this.variables[arrName];
+          if (typeof idx !== 'number' || idx < arr.low || idx > arr.high) {
+            throw new PseudoError(`Array index ${idx} out of bounds [${arr.low}:${arr.high}]`, lineNum);
+          }
+          const value = this.evalExpr(expr, lineNum);
+          arr.value[idx] = value;
+          return;
+        }
+
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+          throw new PseudoError(`Invalid variable name on left side of assignment: ${name}`, lineNum);
+        }
+
+        const value = this.evalExpr(expr, lineNum);
+        this.setValue(name, value, lineNum);
+      }
+
+      handleInput(line, lineNum) {
+        // INPUT Name   or  INPUT Name, "prompt"
+        const rest = line.substring(5).trim();
+        let varName = rest;
+        let promptText = `Enter value for ${rest}:`;
+
+        const comma = rest.indexOf(',');
+        if (comma !== -1) {
+          varName = rest.substring(0, comma).trim();
+          const p = rest.substring(comma + 1).trim();
+          try {
+            promptText = String(this.evalExpr(p, lineNum));
+          } catch {
+            promptText = p.replace(/^["']|["']$/g, '');
+          }
+        }
+
+        // Array element?
+        const arrMatch = varName.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.+)\s*\]$/);
+        let target = null;
+        let isArray = false;
+        let arrInfo = null;
+        let idx = null;
+
+        if (arrMatch) {
+          isArray = true;
+          const arrName = arrMatch[1];
+          if (!(arrName in this.variables) || this.variables[arrName].type !== 'ARRAY') {
+            throw new PseudoError(`"${arrName}" is not a declared array`, lineNum);
+          }
+          arrInfo = this.variables[arrName];
+          idx = this.evalExpr(arrMatch[2], lineNum);
+          if (idx < arrInfo.low || idx > arrInfo.high) {
+            throw new PseudoError(`Array index out of bounds`, lineNum);
+          }
+        } else {
+          if (!(varName in this.variables)) {
+            throw new PseudoError(`Variable "${varName}" has not been declared`, lineNum);
+          }
+        }
+
+        const raw = window.prompt(promptText);
+        if (raw === null) {
+          throw new PseudoError('Input cancelled by user', lineNum);
+        }
+
+        let value = raw;
+        const type = isArray ? arrInfo.elemType : this.variables[varName].type;
+
+        if (type === 'INTEGER') {
+          value = parseInt(raw, 10);
+          if (isNaN(value)) throw new PseudoError(`Expected an INTEGER but got "${raw}"`, lineNum);
+        } else if (type === 'REAL') {
+          value = parseFloat(raw);
+          if (isNaN(value)) throw new PseudoError(`Expected a REAL number but got "${raw}"`, lineNum);
+        } else if (type === 'BOOLEAN') {
+          value = /^(true|yes|1)$/i.test(raw);
+        }
+
+        if (isArray) {
+          arrInfo.value[idx] = value;
+        } else {
+          this.variables[varName].value = value;
+        }
+
+        this.output.push({ type: 'info', text: `> ${promptText} ${raw}` });
+      }
+
+      handleOutput(line, lineNum) {
+        const rest = line.replace(/^(OUTPUT|PRINT)\s+/i, '').trim();
+        if (!rest) {
+          this.output.push({ type: 'out', text: '' });
+          return;
+        }
+
+        // Split by commas, but respect quotes and function calls (simple approach)
+        const parts = this.splitOutputArgs(rest);
+        let result = '';
+        for (const part of parts) {
+          const val = this.evalExpr(part.trim(), lineNum);
+          result += (val === null || val === undefined) ? '' : String(val);
+        }
+        this.output.push({ type: 'out', text: result });
+      }
+
+      splitOutputArgs(str) {
+        const parts = [];
+        let current = '';
+        let inString = false;
+        let quoteChar = '';
+        let depth = 0;
+
+        for (let i = 0; i < str.length; i++) {
+          const ch = str[i];
+          if ((ch === '"' || ch === "'") && (i === 0 || str[i-1] !== '\\')) {
+            if (!inString) {
+              inString = true;
+              quoteChar = ch;
+            } else if (ch === quoteChar) {
+              inString = false;
+            }
+            current += ch;
+          } else if (ch === '(' && !inString) {
+            depth++;
+            current += ch;
+          } else if (ch === ')' && !inString) {
+            depth--;
+            current += ch;
+          } else if (ch === ',' && !inString && depth === 0) {
+            parts.push(current);
+            current = '';
+          } else {
+            current += ch;
+          }
+        }
+        if (current.trim()) parts.push(current);
+        return parts;
+      }
+
+      handleIf(line, lineNum) {
+        // IF condition THEN
+        const m = line.match(/^IF\s+(.+?)\s+THEN\s*$/i);
+        if (!m) throw new PseudoError('Invalid IF syntax. Expected: IF <condition> THEN', lineNum);
+
+        const condition = m[1];
+        const thenStart = this.pc + 1;
+
+        // Find ELSE and ENDIF
+        let depth = 1;
+        let elseLine = -1;
+        let endLine = -1;
+        let i = thenStart;
+
+        while (i < this.lines.length) {
+          let l = this.lines[i];
+          const cIdx = l.indexOf('//');
+          if (cIdx !== -1) l = l.substring(0, cIdx);
+          l = l.trim().toUpperCase();
+
+          if (l.startsWith('IF ') && l.endsWith('THEN')) depth++;
+          else if (l === 'ENDIF') {
+            depth--;
+            if (depth === 0) {
+              endLine = i;
+              break;
+            }
+          } else if (l === 'ELSE' && depth === 1) {
+            elseLine = i;
+          }
+          i++;
+        }
+
+        if (endLine === -1) {
+          throw new PseudoError('Missing ENDIF for this IF statement', lineNum);
+        }
+
+        const condValue = this.evalExpr(condition, lineNum);
+        const isTrue = Boolean(condValue);
+
+        if (isTrue) {
+          // Execute from thenStart to (elseLine or endLine)
+          const stop = elseLine !== -1 ? elseLine : endLine;
+          this.pc = thenStart;
+          while (this.pc < stop) {
+            this.executeLine();
+          }
+        } else if (elseLine !== -1) {
+          this.pc = elseLine + 1;
+          while (this.pc < endLine) {
+            this.executeLine();
+          }
+        }
+
+        this.pc = endLine + 1;
+      }
+
+      handleCase(line, lineNum) {
+        // CASE OF identifier
+        const m = line.match(/^CASE\s+OF\s+(.+)$/i);
+        if (!m) throw new PseudoError('Invalid CASE syntax. Expected: CASE OF <identifier>', lineNum);
+
+        const expr = m[1].trim();
+        const value = this.evalExpr(expr, lineNum);
+
+        // Find ENDCASE
+        const endLine = this.findMatching(['CASE OF'], 'ENDCASE', this.pc);
+        if (endLine === -1) throw new PseudoError('Missing ENDCASE', lineNum);
+
+        // Scan for matching label
+        let i = this.pc + 1;
+        let matched = false;
+        let otherwiseLine = -1;
+
+        while (i < endLine) {
+          let l = this.lines[i];
+          const cIdx = l.indexOf('//');
+          if (cIdx !== -1) l = l.substring(0, cIdx);
+          const trimmed = l.trim();
+          const upper = trimmed.toUpperCase();
+
+          if (upper.startsWith('OTHERWISE')) {
+            otherwiseLine = i;
+            i++;
+            continue;
+          }
+
+          // label : statements
+          const labelMatch = trimmed.match(/^(.+?)\s*:\s*(.*)$/);
+          if (labelMatch) {
+            const labelsPart = labelMatch[1];
+            const restOfLine = labelMatch[2];
+
+            // labels can be 1, 2, 3 or 6, 7 or "A" etc.
+            const labels = labelsPart.split(',').map(s => s.trim());
+            let thisMatches = false;
+            for (const lab of labels) {
+              let labVal;
+              try {
+                labVal = this.evalExpr(lab, i + 1);
+              } catch {
+                labVal = lab.replace(/^['"]|['"]$/g, '');
+              }
+              if (labVal == value) { // loose equality for number/string
+                thisMatches = true;
+                break;
+              }
+            }
+
+            if (thisMatches && !matched) {
+              matched = true;
+              // Execute from this line (rest) and following until next label or ENDCASE
+              if (restOfLine) {
+                // temporary: put rest on a fake line? simpler to just eval if it's OUTPUT etc.
+                // For simplicity we re-execute by setting pc
+              }
+              this.pc = i;
+              // Execute statements until next case label or ENDCASE
+              const nextLabel = this.findNextCaseLabel(i + 1, endLine);
+              const stop = nextLabel !== -1 ? nextLabel : endLine;
+              if (restOfLine.trim()) {
+                // execute the statement on the same line
+                const saved = this.lines[i];
+                this.lines[i] = restOfLine;
+                this.executeLine();
+                this.lines[i] = saved;
+              } else {
+                this.pc = i + 1;
+              }
+              while (this.pc < stop) {
+                this.executeLine();
+              }
+              break;
+            }
+          }
+          i++;
+        }
+
+        if (!matched && otherwiseLine !== -1) {
+          this.pc = otherwiseLine;
+          const restMatch = this.lines[otherwiseLine].match(/OTHERWISE\s*:?\s*(.*)$/i);
+          const stop = endLine;
+          if (restMatch && restMatch[1].trim()) {
+            const saved = this.lines[otherwiseLine];
+            this.lines[otherwiseLine] = restMatch[1];
+            this.executeLine();
+            this.lines[otherwiseLine] = saved;
+          } else {
+            this.pc = otherwiseLine + 1;
+          }
+          while (this.pc < stop) {
+            this.executeLine();
+          }
+        }
+
+        this.pc = endLine + 1;
+      }
+
+      findNextCaseLabel(from, end) {
+        for (let i = from; i < end; i++) {
+          let l = this.lines[i];
+          const cIdx = l.indexOf('//');
+          if (cIdx !== -1) l = l.substring(0, cIdx);
+          const trimmed = l.trim();
+          if (/^.+\s*:/.test(trimmed) || /^OTHERWISE/i.test(trimmed)) return i;
+        }
+        return -1;
+      }
+
+      handleFor(line, lineNum) {
+        // FOR i ← 1 TO 10
+        // FOR i ← 1 TO 10 STEP 2
+        const m = line.match(/^FOR\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:←|<-|=)\s*(.+?)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i);
+        if (!m) throw new PseudoError('Invalid FOR syntax. Expected: FOR <var> ← <start> TO <end> [STEP <step>]', lineNum);
+
+        const varName = m[1];
+        const startExpr = m[2];
+        const endExpr = m[3];
+        const stepExpr = m[4] || '1';
+
+        if (!(varName in this.variables)) {
+          // Auto-declare as INTEGER for convenience in Paper 2 style
+          this.variables[varName] = { type: 'INTEGER', value: 0 };
+        }
+
+        const start = Number(this.evalExpr(startExpr, lineNum));
+        const end = Number(this.evalExpr(endExpr, lineNum));
+        const step = Number(this.evalExpr(stepExpr, lineNum));
+
+        if (step === 0) throw new PseudoError('STEP cannot be zero', lineNum);
+
+        // Find NEXT
+        const nextLine = this.findMatching(['FOR '], 'NEXT', this.pc);
+        if (nextLine === -1) throw new PseudoError(`Missing NEXT for this FOR loop (started at line ${lineNum})`, lineNum);
+
+        // Optional: check NEXT identifier matches
+        const nextText = this.lines[nextLine].replace(/\/\/.*$/, '').trim();
+        const nextMatch = nextText.match(/^NEXT\s*([A-Za-z_][A-Za-z0-9_]*)?$/i);
+        if (nextMatch && nextMatch[1] && nextMatch[1] !== varName) {
+          throw new PseudoError(`NEXT identifier "${nextMatch[1]}" does not match FOR variable "${varName}"`, nextLine + 1);
+        }
+
+        const bodyStart = this.pc + 1;
+        const bodyEnd = nextLine;
+
+        // Execute loop
+        for (let val = start; step > 0 ? val <= end : val >= end; val += step) {
+          this.variables[varName].value = val;
+          this.pc = bodyStart;
+          while (this.pc < bodyEnd) {
+            this.executeLine();
+          }
+        }
+
+        this.pc = nextLine + 1;
+      }
+
+      handleWhile(line, lineNum) {
+        // WHILE condition   or  WHILE condition DO
+        const m = line.match(/^WHILE\s+(.+?)(?:\s+DO)?\s*$/i);
+        if (!m) throw new PseudoError('Invalid WHILE syntax. Expected: WHILE <condition>', lineNum);
+
+        const condition = m[1];
+        const endLine = this.findMatching(['WHILE '], 'ENDWHILE', this.pc);
+        if (endLine === -1) throw new PseudoError(`Missing ENDWHILE for this WHILE loop (started at line ${lineNum})`, lineNum);
+
+        const bodyStart = this.pc + 1;
+
+        while (true) {
+          const cond = this.evalExpr(condition, lineNum);
+          if (!cond) break;
+
+          this.pc = bodyStart;
+          while (this.pc < endLine) {
+            this.executeLine();
+          }
+        }
+
+        this.pc = endLine + 1;
+      }
+
+      handleRepeat(lineNum) {
+        // REPEAT
+        //   ...
+        // UNTIL condition
+        let i = this.pc + 1;
+        let untilLine = -1;
+        let depth = 1;
+        while (i < this.lines.length) {
+          let l = this.lines[i];
+          const cIdx = l.indexOf('//');
+          if (cIdx !== -1) l = l.substring(0, cIdx);
+          l = l.trim().toUpperCase();
+
+          if (l === 'REPEAT') depth++;
+          if (l.startsWith('UNTIL ')) {
+            depth--;
+            if (depth === 0) {
+              untilLine = i;
+              break;
+            }
+          }
+          i++;
+        }
+
+        if (untilLine === -1) {
+          throw new PseudoError(`Missing UNTIL for this REPEAT loop (started at line ${lineNum})`, lineNum);
+        }
+
+        const untilText = this.lines[untilLine].replace(/\/\/.*$/, '').trim();
+        const condMatch = untilText.match(/^UNTIL\s+(.+)$/i);
+        if (!condMatch) throw new PseudoError('Invalid UNTIL syntax', untilLine + 1);
+        const condition = condMatch[1];
+
+        const bodyStart = this.pc + 1;
+
+        do {
+          this.pc = bodyStart;
+          while (this.pc < untilLine) {
+            this.executeLine();
+          }
+        } while (!this.evalExpr(condition, untilLine + 1));
+
+        this.pc = untilLine + 1;
+      }
+    }
+
+    // ===================== RUN =====================
+    function runProgram() {
+      outputEl.innerHTML = '';
+      runStatusEl.textContent = 'Running…';
+      runStatusEl.style.color = 'var(--muted)';
+
+      const source = codeEl.value;
+
+      try {
+        const interp = new Interpreter(source);
+        interp.run();
+
+        // Display output
+        if (interp.output.length === 0) {
+          outputEl.innerHTML = '<div class="output-info">(Program finished with no output)</div>';
+        } else {
+          for (const item of interp.output) {
+            const div = document.createElement('div');
+            div.className = 'output-line' + (item.type === 'info' ? ' output-info' : '');
+            div.textContent = item.text;
+            outputEl.appendChild(div);
+          }
+        }
+
+        const ok = document.createElement('div');
+        ok.className = 'output-success';
+        ok.style.marginTop = '12px';
+        ok.textContent = '✓ Program finished successfully';
+        outputEl.appendChild(ok);
+
+        runStatusEl.textContent = 'Success';
+        runStatusEl.style.color = 'var(--success)';
+      } catch (err) {
+        const div = document.createElement('div');
+        div.className = 'output-error';
+
+        if (err instanceof PseudoError || err.line) {
+          div.innerHTML = `<strong>Error on line ${err.line}</strong>\n${err.message}`;
+        } else {
+          div.textContent = 'Unexpected error: ' + err.message;
+        }
+        outputEl.appendChild(div);
+
+        runStatusEl.textContent = 'Error';
+        runStatusEl.style.color = 'var(--error)';
+
+        // Scroll output to show error
+        outputEl.scrollTop = 0;
+      }
+    }
+
+    // Load a friendly starter example
+    codeEl.value = EXAMPLES.input;
+    updateLineNumbers();
+  </script>
+</body>
+</html>
